@@ -7,6 +7,20 @@ This module provides utility functions to mitigate data skew problems commonly e
 - **Salted Join**: Mitigates data skew when joining a large dataframe with a small dataframe
 - **Cross Join**: Performs efficient cross join using broadcast variables
 
+## salted_join() Performance Improvement
+
+| Join Type | Dataset Sizes | Built-in join() | salted_join() | Improvement |
+|-----------|---------------|--------|-------|-------------|
+| **Inner** | Df_big: ~400M<br>Df_small: 35K | 4m 20s | 1m 53s | **56.5%** |
+| **Inner** | Df_big: ~400M<br>Df_small: 10K | 3m 2s | 1m 31s | **50.0%** |
+| **Left**  | Df_big: ~400M<br>Df_small: 35K | 19.14s | 15.31s | **15.6%** |
+| **Left**  | Df_big: ~400M<br>Df_small: 10K | 7.98s | 6.39s | **20.0%** |
+
+## Summary
+
+- **Inner Joins**: Improvement of approximately 40-50%
+- **Left Joins**: Improvement of approximately 15-20%
+
 ## Main Functions
 
 ### `salted_join(df_big, big_key_column, df_small, small_key_column, join_type)`
