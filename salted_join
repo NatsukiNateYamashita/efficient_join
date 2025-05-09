@@ -1,0 +1,63 @@
+from databricks.sdk.runtime import spark, dbutils
+from pyspark.sql import DataFrame as SparkDataFrame
+from pyspark.sql import functions as F
+from pyspark.sql import types as T
+from pyspark.sql.window import Window
+
+# salted_join
+COL_NAME = "explodedCol"
+SEED = 123456
+def _get_salted_df(df_big: SparkDataFrame, big_key_column: str) -> SparkDataFrame:    
+    return df_big.withColumn(
+        big_key_column + "_",
+        F.concat(df_big[big_key_column], F.lit("_"), (F.floor(F.rand(SEED) * 3).cast(T.IntegerType())))
+    )
+
+def _get_exploded_df(df_small: SparkDataFrame, small_key_column: str) -> SparkDataFrame:
+    column_list = [F.lit(j) for j in range(3)]
+    return df_small.withColumn(
+        COL_NAME,
+        F.explode(F.array(*column_list))
+    )
+
+def salted_join(df_big: SparkDataFrame, 
+                big_key_column: str, 
+                df_small: SparkDataFrame, 
+                small_key_column: str, 
+                join_type: str) -> SparkDataFrame:
+    '''
+
+    Raise
+    ------
+    assertion
+        Assert if a join method other than following is specified due to a memory error.
+        inner, left, leftouter, left_outer, leftanti, left_anti
+
+    '''
+    # check join type
+    joinable_type = ['inner', 'left', 'leftouter', 'left_outer', 'leftanti', 'left_anti']
+    assert join_type in joinable_type, f'join type {join_type} is not available. If you really want to use this method, talk to tech leaders.'
+        
+    
+    if big_key_column==small_key_column:
+        df_small = df_small.withColumn(small_key_column+'_s', F.col(small_key_column)).drop(small_key_column)
+        small_key_column = small_key_column+'_s'
+        
+    df_big_salted = _get_salted_df(df_big, big_key_column)
+    df_small_exploded = _get_exploded_df(df_small, small_key_column) 
+
+    df_joined = (df_big_salted
+                    .join(
+                        df_small_exploded,
+                        (F.col(big_key_column + "_") == F.concat(df_small_exploded[small_key_column], F.lit("_"), df_small_exploded[COL_NAME])),
+                        join_type)
+                    .drop(big_key_column + "_", COL_NAME)
+                )
+    if small_key_column[-2:]=='_s':
+        df_joined = df_joined.drop(small_key_column)
+
+    return df_joined
+
+    
+def crossjoin(df_big: SparkDataFrame, df_small: SparkDataFrame) -> SparkDataFrame:
+    return (df_big.crossJoin(F.broadcast(df_small)))
