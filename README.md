@@ -18,7 +18,7 @@ This module provides utility functions to mitigate data skew problems commonly e
 
 ## Summary
 
-- **Inner Joins**: Improvement of approximately 40-50%
+- **Inner Joins**: Improvement of approximately 50-57%
 - **Left Joins**: Improvement of approximately 15-20%
 
 ## Main Functions
